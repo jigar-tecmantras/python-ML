@@ -56,16 +56,16 @@ def train_models():
     df['text'] = df['text'].astype(str)
 
     # Add custom offer/discount data
-    custom_data = pd.DataFrame({
-        'label': [2, 3, 2, 3],
-        'text': [
-            'Huge discount on all electronic items today! Don’t miss out!',
-            'Limited time offer! 50% off on selected products.',
-            'Special offer: Buy one get one free on all shoes!',
-            'Massive discount this weekend on all online purchases.'
-        ]
-    })
-    df = pd.concat([df, custom_data], ignore_index=True)
+    # custom_data = pd.DataFrame({
+    #     'label': [2, 3, 2, 3],
+    #     'text': [
+    #         'Huge discount on all electronic items today! Don’t miss out!',
+    #         'Limited time offer! 50% off on selected products.',
+    #         'Special offer: Buy one get one free on all shoes!',
+    #         'Massive discount this weekend on all online purchases.'
+    #     ]
+    # })
+    df = pd.concat([df], ignore_index=True)
     df['text'] = df['text'].apply(clean_text)
 
     # Train/test split
@@ -104,7 +104,7 @@ def predict_spam(text_input, models, vectorizer):
     cleaned = clean_text(text_input)
     vectorized = vectorizer.transform([cleaned])
 
-    label_map = {0: "HAM", 1: "SPAM", 2: "OFFER", 3: "DISCOUNT"}
+    label_map = {0: "HAM", 1: "SPAM"}
     results = {}
 
     for model_name, model in models.items():
