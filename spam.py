@@ -9,32 +9,52 @@ from sklearn.svm import LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
-# Clean text function
+# Enhanced clean text function
 def clean_text(text):
-    text = text.lower()
-    text = re.sub(r'\d+', '', text)
-    text = re.sub(r'[^\w\s]', '', text)
-    text = re.sub(r'\s+', ' ', text)
+    text = text.lower() 
+    text = re.sub(r'\d+', '', text) 
+    text = re.sub(r'[^\w\s]', '', text) 
+    text = re.sub(r'\s+', ' ', text)  
     return text.strip()
 
-# Train all models and return them
+# Train models
 @st.cache_resource
 def train_models():
-    url = "https://raw.githubusercontent.com/justmarkham/pycon-2016-tutorial/master/data/sms.tsv"
-    df = pd.read_csv(url, sep='\t', header=None, names=['label', 'text'])
-    
-    # Update labels: 'ham' = 0, 'spam' = 1, 'offer' = 2, 'discount' = 3
-    df['label'] = df['label'].map({'ham': 0, 'spam': 1, 'offer': 2, 'discount': 3})
-    
-    # Text preprocessing
+    # Read CSV directly from S3 URL
+    df = pd.read_csv("https://puravida-test.s3.ap-south-1.amazonaws.com/combined_data.csv", encoding='latin1')
+
+    # If 'label' is a string (i.e., column name), drop the first row assuming it's a bad header
+    if df['label'].iloc[0] == 'label':
+        df = df.iloc[1:]
+
+    # Ensure correct dtypes
+    df['label'] = df['label'].astype(int)
+    df['text'] = df['text'].astype(str)
+
+    # Adding custom "offer" and "discount" data with numeric labels 2 and 3
+    custom_data = pd.DataFrame({
+        'label': [2, 3, 2, 3],
+        'text': [
+            'Huge discount on all electronic items today! Don’t miss out!',
+            'Limited time offer! 50% off on selected products.',
+            'Special offer: Buy one get one free on all shoes!',
+            'Massive discount this weekend on all online purchases.'
+        ]
+    })
+
+    # Combine datasets
+    df = pd.concat([df, custom_data], ignore_index=True)
+
+    # Clean text
     df['text'] = df['text'].apply(clean_text)
 
-    # Train-test split
+    # Split data
     X_train, X_test, y_train, y_test = train_test_split(df['text'], df['label'], test_size=0.2, random_state=42)
     vectorizer = TfidfVectorizer()
     X_train_tfidf = vectorizer.fit_transform(X_train)
     X_test_tfidf = vectorizer.transform(X_test)
 
+    # Models
     models = {
         "Naive Bayes": MultinomialNB(),
         "Logistic Regression": LogisticRegression(max_iter=1000),
@@ -54,7 +74,7 @@ def train_models():
 
     return trained_models, vectorizer, accuracies
 
-# Predict using all models
+# Prediction
 def predict_spam(text_input, models, vectorizer):
     cleaned = clean_text(text_input)
     vectorized = vectorizer.transform([cleaned])
@@ -69,7 +89,7 @@ def predict_spam(text_input, models, vectorizer):
 
     return results
 
-# Streamlit interface
+# Streamlit UI
 st.title("📩 Email Classification with Multiple Models")
 st.write("Enter a message and compare how different models classify it (SPAM, HAM, OFFER, or DISCOUNT) along with their accuracy.")
 
